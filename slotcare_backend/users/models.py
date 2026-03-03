@@ -53,3 +53,14 @@ class RegistreSessio(models.Model):
 
     def __str__(self):
         return f"[{self.data_hora.strftime('%Y-%m-%d %H:%M')}] {self.username} - {'OK' if self.inici_correcte else 'FAIL'}"
+    
+
+class SesionJuego(models.Model):
+    usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sesiones')
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    duracion_segundos = models.IntegerField()
+    # Para el requisito de pérdidas hipotéticas que mencionamos antes
+    perdida_estimada = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+
+    def __str__(self):
+        return f"Sesión de {self.usuario.username} - {self.duracion_segundos}s"

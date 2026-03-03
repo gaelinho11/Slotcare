@@ -8,7 +8,13 @@ from django.db import transaction
 from .models import CustomUser, RegistreSessio
 from .serializers import CustomUserSerializer, UserCreationSerializer
 from .permissions import CanManageUsers
-from rest_framework_simplejwt.tokens import RefreshToken 
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .serializers import SesionJuegoSerializer
+from rest_framework.authtoken.models import Token
+from .models import CustomUser, SesionJuego
 
 MAX_INTENTS = 3
 
@@ -70,15 +76,14 @@ class LoginView(APIView):
             user.comptador_intents_fallits = 0
             user.save()
             
-            refresh = RefreshToken.for_user(user)
-
+            token, created = Token.objects.get_or_create(user=user)
             RegistreSessio.objects.create(
                 username=username, sistema=sistema, inici_correcte=True
             )
             return Response({
                 "message": "Inici de sessió correcte.", 
                 "rol": user.rol,
-                "access_token": str(refresh.access_token)
+                "token": token.key  # Enviem la clau del token de la base de dades
             }, status=status.HTTP_200_OK)
         else:
             # Login FALLIT (Requisit 2, 4, 5)
@@ -166,3 +171,19 @@ class UserManagementViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_200_OK) # <--- Hem completat el tancament aquí
         
         return Response({"message": "El compte ja estava desbloquejat."}, status=status.HTTP_200_OK)
+    
+
+# Gestio de sessions de joc
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def guardar_sesion_juego(request):
+    if request.method == 'GET':
+        # Buscamos todas las sesiones del usuario que hace la petición
+        sesiones = SesionJuego.objects.filter(usuario=request.user).order_by('-id')
+        serializer = SesionJuegoSerializer(sesiones, many=True)
+        return Response(serializer.data)
+    serializer = SesionJuegoSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status': 'Sesión guardada correctamente'}, status=201)
+    return Response(serializer.errors, status=400)

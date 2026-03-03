@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import CustomUser
 from .validators import SlotCarePasswordValidator
+from .models import SesionJuego
 
 class CustomUserSerializer(serializers.ModelSerializer):
     # ... (aquest serialitzador és per a la gestió CRUD, no per al registre)
@@ -40,3 +41,13 @@ class UserCreationSerializer(serializers.ModelSerializer):
             rol=validated_data.get('rol', 'Client') 
         )
         return user
+
+class SesionJuegoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SesionJuego
+        fields = ['duracion_segundos', 'perdida_estimada']
+
+    def create(self, validated_data):
+        # El usuario lo sacaremos del token, no del JSON por seguridad
+        validated_data['usuario'] = self.context['request'].user
+        return super().create(validated_data)

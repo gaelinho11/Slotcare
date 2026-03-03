@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     
     # Aplicacions de tercers
     'rest_framework',
+    'rest_framework.authtoken',
     'rest_framework_simplejwt',
     
     # La nostra aplicació
@@ -47,6 +48,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', 
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,8 +84,15 @@ WSGI_APPLICATION = 'slotcare_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'slotcare_db', # El que pusiste en Workbench
+        'USER': 'root',                        # Normalmente root
+        'PASSWORD': 'root',           # La que pusiste al instalar MySQL
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
 # Indica a Django que utilitzi el nostre model d'usuari (users/models.py)
@@ -90,9 +100,9 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 # Configuració DRF
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     )
@@ -127,3 +137,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 APPEND_SLASH = False
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
