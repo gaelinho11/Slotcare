@@ -21,5 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Totes les peticions a /api/users/ aniran a la nostra app 'users'
-    path('api/users/', include('users.urls')),
+    path('api/users/', include('users.urls')), 
 ]

@@ -81,6 +81,7 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', responseData['token']);
         await prefs.setString('user_rol', responseData['rol']);
+        await prefs.setInt('userId', responseData['user_id']);
 
         return {
           'success': true,
@@ -142,5 +143,73 @@ Future<List<dynamic>> obtenerHistorialSesiones() async {
   } else {
     return [];
   }
+}
+Future<List<dynamic>> obtenerNoticias() async {
+  final response = await http.get(Uri.parse('$API_BASE_URL/noticies/'));
+  if (response.statusCode == 200) {
+    return json.decode(utf8.decode(response.bodyBytes));
+  }
+  return [];
+}
+
+// amb aquest metode obting tots els missatges del usuari
+Future<List<dynamic>> getMissatges() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? token = prefs.getString('auth_token');
+  final response = await http.get(
+    Uri.parse('$API_BASE_URL/missatges/'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Token $token',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body);
+  } else {
+    throw Exception('Error al carregar missatges');
+  }
+}
+//amb aquest metode envio missatges
+Future<bool> enviarMissatge(int receptorId, String contingut) async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? token = prefs.getString('auth_token');
+  final response = await http.post(
+    Uri.parse('$API_BASE_URL/missatges/'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Token $token',
+    },
+    body: json.encode({
+      'receptor': receptorId,
+      'contenido': contingut,
+    }),
+  );
+
+  return response.statusCode == 201;
+}
+//amb aquest retorno la llista de terapeutes perque el pacient pugui escollir
+Future<List<dynamic>> getTerapeutes() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? token = prefs.getString('auth_token');
+  
+  final response = await http.get(
+    Uri.parse('$API_BASE_URL/terapeutes-llista/'), 
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Token $token',
+    },
+  );
+
+  print("DEBUG Terapeutes: ${response.body}"); // Mira què respon el servidor
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body);
+  }
+  return [];
+}
+Future<int?> getUserId() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getInt('userId');
 }
 }

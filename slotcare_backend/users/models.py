@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 ROL_OPCIONS = (
     ('Superadmin', 'Superadministrador'),
     ('Admin', 'Administrador'),
+    ('Terapeuta', 'Terapeuta'),
     ('Client', 'Usuari Final o Client'),
 )
 
@@ -36,6 +37,29 @@ class CustomUser(AbstractUser):
         self.esta_bloquejat = False
         self.comptador_intents_fallits = 0
         self.save()
+
+class Noticia(models.Model): #aqui he creaat la clase noticia per tenir la taula per anar afegint noticies, important!!!! poso la data de publicacio per ordenarles al mostrarles
+    titol = models.CharField(max_length=200)
+    contingut = models.TextField()
+    imatge_url = models.URLField(blank=True, null=True) 
+    data_publicacio = models.DateTimeField(auto_now_add=True)
+    font = models.CharField(max_length=100, blank=True) 
+
+    def __clau__(self):
+        return self.titol
+
+class Missatge(models.Model):
+    emisor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='mensajes_enviados')
+    receptor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='mensajes_recibidos')
+    contenido = models.TextField()
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['fecha_envio']
+
+    def __str__(self):
+        return f"De {self.emisor.username} a {self.receptor.username} - {self.fecha_envio}"
 
 class RegistreSessio(models.Model):
     """Model per comptabilitzar inicis de sessió (Requisit 4)."""

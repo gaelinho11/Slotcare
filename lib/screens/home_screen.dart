@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/pacient_view.dart';
+import 'package:frontend/screens/terapeuta_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/time_service.dart';
 import '../services/auth_service.dart';
+import 'news_view.dart';
+import 'package:flame/game.dart'; 
+import '../game/blackjack_game.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userRol;
@@ -26,37 +31,26 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
   void _logout() async {
-  print("DEBUG: Iniciando proceso de logout...");
-
   try {
     // 1. Obtenemos el tiempo directamente del Provider para asegurar que no es 0
     // Si tu compañero lo llamó 'TimeService', asegúrate de que el nombre sea exacto
     int segundosTotales = _timeService.obtenerSegundosActuales(); 
     
-    double perdidaCalculada = segundosTotales * 0.20;
+    double perdidaCalculada = segundosTotales * 0.05;
     
-    print("DEBUG: Datos a enviar -> Segundos: $segundosTotales, Perdida: $perdidaCalculada");
-
     // 2. Intentamos guardar en MySQL
     final authService = AuthService();
     
     // Ponemos un print justo antes del await
-    print("DEBUG: Llamando a la API de Django...");
     
     bool guardado = await authService.registrarSesion(segundosTotales, perdidaCalculada);
     _timeService.resetTimer();
-    if (guardado) {
-      print("✅ Sesión registrada con éxito en MySQL.");
-    } else {
-      print("❌ El servidor respondió con error (posible 401 o 400).");
-    }
   } catch (e) {
     // Esto te dirá si la IP está mal o si el servidor no es alcanzable
-    print("🚨 ERROR CRÍTICO durante el registro: $e");
+    print("ERROR CRÍTICO durante el registro: $e");
   }
 
   // 3. Limpiamos datos locales y salimos
-  print("DEBUG: Limpiando SharedPreferences y saliendo...");
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove('auth_token');
   await prefs.remove('user_rol');
@@ -73,9 +67,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 3 Pestañas: Juegos, Terapeutas, Perfil
+    if (widget.userRol == 'Terapeuta') {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("Panell de Terapeuta"),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => _logout(),
+            )
+          ],
+        ),
+        body: const ListaChatsTerapeuta(), // La crearem ara
+      );
+    }
+
+    // 
     final List<Widget> pages = [
       const DashboardView(),
+      const NewsView(),
       const TherapistsView(),
       ProfileView(userRol: widget.userRol),
     ];
@@ -133,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 10,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.casino), label: 'Jugar'),
+          BottomNavigationBarItem(icon: Icon(Icons.article), label: 'Notícies'), // <--- Nova icona
           BottomNavigationBarItem(
             icon: Icon(Icons.psychology),
             label: 'Terapeutas',
@@ -255,7 +266,43 @@ class DashboardView extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(15),
               onTap: () {
-                print("Click en Blackjack");
+                final game = BlackjackGame(context); // Creem la instància aquí per poder cridar mètodes
+                
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Scaffold(
+                      body: Stack(
+                        children: [
+                          GameWidget(game: game), // El joc de fons
+                          
+                          // Botons a sobre
+                          Positioned(
+                            bottom: 50,
+                            left: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () => game.repartirCartaJugador(),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                                  child: const Text("Demanar (Hit)"),
+                                ),
+                                const SizedBox(width: 20),
+                                ElevatedButton(
+                                  onPressed: () => game.plantarse(),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                  child: const Text("Plantar-se (Stand)"),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               },
               child: Container(
                 width: 320,
@@ -292,7 +339,7 @@ class DashboardView extends StatelessWidget {
 }
 
 // --- VISTA 2: TERAPEUTAS ---
-class TherapistsView extends StatelessWidget {
+/*class TherapistsView extends StatelessWidget {
   const TherapistsView({super.key});
 
   @override
@@ -384,7 +431,7 @@ class TherapistsView extends StatelessWidget {
     );
   }
 }
-
+*/
 // --- VISTA 3: PERFIL ---
 class ProfileView extends StatefulWidget {
   final String userRol;
@@ -468,7 +515,7 @@ class _ProfileViewState extends State<ProfileView> {
                   ],
                   rows: snapshot.data!.map((sesion) {
                     return DataRow(cells: [
-                      DataCell(Text(sesion['fecha']?.toString().substring(0,10) ?? 'Avui')),
+                      DataCell(Text(sesion['fecha_inicio']?.toString().substring(0,10) ?? 'Avui')),
                       DataCell(Text("${sesion['duracion_segundos']}s")),
                       DataCell(Text("${sesion['perdida_estimada']}€")),
                     ]);

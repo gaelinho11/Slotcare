@@ -5,16 +5,19 @@ from rest_framework.decorators import action
 from rest_framework import permissions
 from django.contrib.auth import authenticate
 from django.db import transaction
-from .models import CustomUser, RegistreSessio
-from .serializers import CustomUserSerializer, UserCreationSerializer
+from .models import CustomUser, Missatge, RegistreSessio
+from .serializers import CustomUserSerializer, MissatgeSerializer, UserCreationSerializer, UserSerializer
 from .permissions import CanManageUsers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .serializers import SesionJuegoSerializer
+from .serializers import SesionJuegoSerializer, NoticiaSerializer, MissatgeSerializer
 from rest_framework.authtoken.models import Token
-from .models import CustomUser, SesionJuego
+from .models import CustomUser, SesionJuego, Noticia
+from rest_framework import status, permissions # Assegura't que tens 'permissions'
+from rest_framework.permissions import AllowAny, IsAuthenticated # Afegeix AllowAny aquí
+from django.db.models import Q
 
 MAX_INTENTS = 3
 
@@ -83,6 +86,7 @@ class LoginView(APIView):
             return Response({
                 "message": "Inici de sessió correcte.", 
                 "rol": user.rol,
+                'user_id': user.id,
                 "token": token.key  # Enviem la clau del token de la base de dades
             }, status=status.HTTP_200_OK)
         else:
@@ -174,11 +178,11 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     
 
 # Gestio de sessions de joc
-@api_view(['GET', 'POST'])
+@api_view(['GET', 'POST']) #al principio puse solo push pero he añadido el get para mostrar la tabla de sesiones
 @permission_classes([IsAuthenticated])
 def guardar_sesion_juego(request):
     if request.method == 'GET':
-        # Buscamos todas las sesiones del usuario que hace la petición
+        # busco todas las sesiones del usuario que inciia sesion
         sesiones = SesionJuego.objects.filter(usuario=request.user).order_by('-id')
         serializer = SesionJuegoSerializer(sesiones, many=True)
         return Response(serializer.data)
@@ -187,3 +191,33 @@ def guardar_sesion_juego(request):
         serializer.save()
         return Response({'status': 'Sesión guardada correctamente'}, status=201)
     return Response(serializer.errors, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny]) # poso que tothom pot llegir les noticies, no necessitem autenticacio de cap tipus
+def llista_noticies(request):
+    noticies = Noticia.objects.all().order_by('-data_publicacio')
+    serializer = NoticiaSerializer(noticies, many=True)
+    return Response(serializer.data)
+
+class MissatgeViewSet(viewsets.ModelViewSet):
+    serializer_class = MissatgeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Retorna missatges on l'usuari és emisor o receptor
+        return Missatge.objects.filter(Q(emisor=user) | Q(receptor=user))
+
+    def perform_create(self, serializer):
+        # L'emisor sempre és l'usuari que fa la petició
+        serializer.save(emisor=self.request.user)
+
+#he hagut de crear aquest endpoint per accedir a la llista de terapeutes
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def llista_terapeutes(request):
+    # busco nomes els usuaris amb rol 'Terapeuta'
+    terapeutes = CustomUser.objects.filter(rol='Terapeuta')
+    serializer = UserSerializer(terapeutes, many=True)
+    return Response(serializer.data)

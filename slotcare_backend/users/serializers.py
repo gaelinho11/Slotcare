@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import CustomUser
+from .models import CustomUser, Missatge
 from .validators import SlotCarePasswordValidator
 from .models import SesionJuego
+from .models import Noticia
 
 class CustomUserSerializer(serializers.ModelSerializer):
     # ... (aquest serialitzador és per a la gestió CRUD, no per al registre)
@@ -51,3 +52,34 @@ class SesionJuegoSerializer(serializers.ModelSerializer):
         # El usuario lo sacaremos del token, no del JSON por seguridad
         validated_data['usuario'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class NoticiaSerializer(serializers.ModelSerializer): #creo el serializer de noticia amb TOTES les dades
+    class Meta:
+        model = Noticia
+        fields = '__all__'
+
+class MissatgeSerializer(serializers.ModelSerializer):
+    # afegeixo els camps de lectura per veure el nom d'usuari directament
+    emisor_username = serializers.ReadOnlyField(source='emisor.username')
+    receptor_username = serializers.ReadOnlyField(source='receptor.username')
+
+    class Meta:
+        model = Missatge
+        fields = [
+            'id', 
+            'emisor', 
+            'emisor_username', 
+            'receptor', 
+            'receptor_username', 
+            'contenido', 
+            'fecha_envio', 
+            'leido'
+        ]
+        # L'emisor el posare des de la vista segons l'usuari loguejat
+        read_only_fields = ['emisor', 'fecha_envio']
+
+class UserSerializer(serializers.ModelSerializer): #em servira perque el terapeuta pugui veure una llista dels pacients amb els que te missatges
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'first_name', 'last_name']

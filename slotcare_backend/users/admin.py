@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, RegistreSessio
+from .models import CustomUser, Missatge, RegistreSessio, Noticia
 
 # Registrem el model de registre de sessions
 admin.site.register(RegistreSessio)
@@ -24,3 +24,10 @@ class CustomUserAdmin(UserAdmin):
 
 # Registrem el nostre model d'usuari personalitzat amb la nostra configuració
 admin.site.register(CustomUser, CustomUserAdmin)
+
+class NoticiaAdmin(admin.ModelAdmin):
+    list_display = ['titol', 'font', 'data_publicacio']
+    search_fields = ['titol', 'contingut']
+
+admin.site.register(Noticia, NoticiaAdmin)
+admin.site.register(Missatge)
