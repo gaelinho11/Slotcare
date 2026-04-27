@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ukr!f9x#bc729+b^miu!e9z(c!9cj7s-%!%xf@#bhvn_g$gcs0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['slotcare.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
